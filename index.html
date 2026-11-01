@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Lernakte</title>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json?v=3">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
+<link rel="icon" href="icon.svg?v=3" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -104,6 +104,7 @@ textarea{resize:vertical;line-height:1.45}
 .memo ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
 .memo li::marker{color:var(--red)}
 .danger{background:transparent;border:0;color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:10px;align-self:center}
+#resetAll.armed{border-color:var(--bad);color:var(--bad)}
 .danger.armed{color:var(--bad)}
 
 /* Verhör */
@@ -247,6 +248,11 @@ textarea{resize:vertical;line-height:1.45}
       <div class="field"><label class="lbl" for="vInv">Stimme Ermittler</label><select id="vInv"></select></div>
       <div class="field"><label class="lbl" for="vWit">Stimme Zeugen</label><select id="vWit"></select></div>
     </div>
+  </div>
+  <div class="memo"><span class="lbl">3 · Daten</span>
+    <p class="hint">Löscht alle Fächer, Themen, Akten, Vertonungen und Quiz-Ergebnisse auf diesem Gerät. Deine API-Keys und Stimmen bleiben gespeichert.</p>
+    <button class="ghost wide" id="resetAll">Alles löschen und neu starten</button>
+    <p class="hint" id="resetMsg" aria-live="polite"></p>
   </div>
   <button class="primary wide" id="saveSet">Speichern</button>
   <p class="hint" id="setMsg" aria-live="polite"></p>
@@ -641,6 +647,18 @@ $('#saveSet').addEventListener('click',()=>{
     vNarr:$('#vNarr').value||DEF.vNarr,vInv:$('#vInv').value||DEF.vInv,vWit:$('#vWit').value||DEF.vWit,
     bNarr:$('#bNarr').value,bInv:$('#bInv').value,bWit:$('#bWit').value};
   saveSetObj(SET);$('#setMsg').textContent='Gespeichert.';
+});
+
+/* ---------- Alles löschen ---------- */
+let resetT=0;
+$('#resetAll').addEventListener('click',async()=>{
+  const b=$('#resetAll');
+  if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Wirklich alles löschen? Nochmal tippen';clearTimeout(resetT);resetT=setTimeout(()=>{b.classList.remove('armed');b.textContent='Alles löschen und neu starten'},4000);return}
+  clearTimeout(resetT);stop();P.c=null;
+  for(const st of ['cases','audio','folders'])await tx(st,'readwrite',s=>s.clear());
+  try{localStorage.setItem('lernakte.seeded','1')}catch(e){}
+  b.classList.remove('armed');b.textContent='Alles löschen und neu starten';
+  $('#resetMsg').textContent='Alles gelöscht. Du startest jetzt mit einem leeren Archiv.';
 });
 
 /* ---------- Installation als App ---------- */
