@@ -197,7 +197,7 @@ textarea{resize:vertical;line-height:1.45}
     <p class="qtext" style="font-size:24px">Kurzes Verhör? Ein paar einfache Fragen, etwa eine Minute.</p>
     <div class="row"><button class="ghost" id="endLater">Später</button><button class="primary" id="endQuiz">Verhör starten</button></div>
   </div>
-  <button class="ghost wide" id="voiceIt">Mit ElevenLabs vertonen</button>
+  <button class="ghost wide" id="voiceIt">Vertonen</button>
   <p class="hint" id="vStatus" aria-live="polite"></p>
   <div class="transcript" id="transcript" aria-live="polite"></div>
   <div class="field"><span class="lbl">Kapitel</span><div class="chap" id="chap"></div></div>
@@ -232,7 +232,16 @@ textarea{resize:vertical;line-height:1.45}
   </div>
 
   <div class="memo"><span class="lbl">2 · Stimmen</span>
-    <div class="field"><label class="lbl" for="sEngine">Vorlesen mit</label><select id="sEngine"><option value="browser">Gerätestimmen · kostenlos und unbegrenzt</option><option value="eleven">ElevenLabs · sehr realistisch, kostenpflichtig</option></select></div>
+    <div class="field"><label class="lbl" for="sEngine">Vorlesen mit</label><select id="sEngine"><option value="gemini">Gemini-Stimmen · natürlich, kostenlos mit Tageslimit</option><option value="eleven">ElevenLabs · sehr realistisch, kostenpflichtig</option><option value="browser">Gerätestimmen · unbegrenzt, klingt künstlich</option></select></div>
+    <div id="gTtsBox" class="field" style="gap:14px">
+      <p class="hint">Nutzt deinen Gemini-Key von oben. Jede Folge wird einmal vertont und dann auf dem Gerät gespeichert, auch offline.</p>
+      <div class="field"><label class="lbl" for="gNarr">Stimme Erzähler</label><select id="gNarr"></select></div>
+      <div class="field"><label class="lbl" for="gInv">Stimme Ermittler</label><select id="gInv"></select></div>
+      <div class="field"><label class="lbl" for="gWit">Stimme Zeugen</label><select id="gWit"></select></div>
+      <div class="field"><label class="lbl" for="sGTts">Stimmenmodell</label><input type="text" id="sGTts" autocomplete="off"></div>
+      <button class="ghost wide" id="testGem">Probe anhören</button>
+      <p class="hint" id="gemMsg" aria-live="polite"></p>
+    </div>
     <div id="devBox" class="field" style="gap:14px">
       <p class="hint">Die Qualität hängt vom Gerät ab. iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch, dort eine Stimme mit „Premium“ oder „Erweitert“ laden. Windows: die App im Edge-Browser öffnen, dort gibt es natürliche Online-Stimmen.</p>
       <div class="field"><label class="lbl" for="bNarr">Stimme Erzähler</label><select id="bNarr"></select></div>
@@ -277,10 +286,11 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fmt=s=>{s=Math.max(0,Math.round(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 
 /* ---------- Einstellungen ---------- */
-const DEF={writer:'gemini',gemini:'',gmodel:'gemini-flash-latest',claude:'',model:'claude-sonnet-5-5',engine:'browser',eleven:'',vNarr:'pNInz6obpgDQGcFmaJgB',vInv:'ErXwobaYiN019PkySvjV',vWit:'21m00Tcm4TlvDq8ikWAM',bNarr:'',bInv:'',bWit:''};
+const DEF={writer:'gemini',gemini:'',gmodel:'gemini-flash-latest',claude:'',model:'claude-sonnet-5-5',engine:'gemini',gtts:'gemini-3.1-flash-tts-preview',gNarr:'Charon',gInv:'Orus',gWit:'Aoede',eleven:'',vNarr:'pNInz6obpgDQGcFmaJgB',vInv:'ErXwobaYiN019PkySvjV',vWit:'21m00Tcm4TlvDq8ikWAM',bNarr:'',bInv:'',bWit:''};
 function loadSet(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem('lernakte.set')||'{}'))}catch(e){return {...DEF}}}
 function saveSetObj(o){try{localStorage.setItem('lernakte.set',JSON.stringify(o))}catch(e){}}
 let SET=loadSet();
+try{if(!localStorage.getItem('lernakte.mig1')){if(SET.engine==='browser'){SET.engine='gemini';saveSetObj(SET)}localStorage.setItem('lernakte.mig1','1')}}catch(e){}
 
 /* ---------- Speicher (IndexedDB) ---------- */
 const dbp=new Promise((res,rej)=>{const r=indexedDB.open('lernakte',2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('cases'))d.createObjectStore('cases',{keyPath:'id'});if(!d.objectStoreNames.contains('audio'))d.createObjectStore('audio');if(!d.objectStoreNames.contains('folders'))d.createObjectStore('folders',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
@@ -419,6 +429,7 @@ function log(msg,cls){const li=document.createElement('li');li.textContent=msg;i
 $('#create').addEventListener('click',async()=>{
   const btn=$('#create');$('#log').innerHTML='';
   if(SET.writer==='claude'?!SET.claude:!SET.gemini){log('Bitte zuerst den '+(SET.writer==='claude'?'Claude':'Gemini')+' API-Key in den Einstellungen eintragen.','err');return}
+  if(SET.engine==='gemini'&&!SET.gemini){log('Bitte zuerst den Gemini API-Key in den Einstellungen eintragen.','err');return}
   if(SET.engine==='eleven'&&!SET.eleven){log('Bitte zuerst den ElevenLabs API-Key in den Einstellungen eintragen.','err');return}
   btn.disabled=true;
   try{
@@ -439,6 +450,8 @@ $('#create').addEventListener('click',async()=>{
     if(SET.engine==='eleven'&&SET.eleven){
       const ok=await makeAudio(c,log);
       if(ok){c.voice='eleven';await putCase(c)}
+    }else if(SET.engine==='gemini'){
+      if(await makeGeminiAudio(c,log)){c.voice='gemini';await putCase(c)}
     }
     log('Akte angelegt.','ok');
     $('#paste').value='';$('#file').value='';$('#fileName').textContent='Datei auswählen';
@@ -465,6 +478,79 @@ async function writeScript(prompt){
     throw new Error('Gemini-Fehler: '+m)}
   return (d.candidates?.[0]?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('');
 }
+/* ---------- Gemini-Stimmen ---------- */
+const GVOICES=['Charon','Orus','Kore','Aoede','Leda','Puck','Fenrir','Zephyr','Enceladus','Sulafat','Iapetus','Algieba','Gacrux','Schedar','Achird','Sadaltager','Despina','Erinome','Umbriel','Alnilam'];
+const GROLE={'Erzähler':'Erzaehler','Ermittler':'Ermittler','Zeuge':'Zeuge','Zeugin':'Zeuge'};
+function gVoice(r){return {Erzaehler:SET.gNarr,Ermittler:SET.gInv,Zeuge:SET.gWit}[r]||SET.gNarr||DEF.gNarr}
+function pcmToWav(b64,rate){
+  const bin=atob(b64),n=bin.length,buf=new ArrayBuffer(44+n),v=new DataView(buf);
+  const w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n,true);
+  const u=new Uint8Array(buf,44);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);
+  return new Blob([buf],{type:'audio/wav'});
+}
+async function gemTTS(lines,onWait){
+  const sp=[...new Set(lines.map(l=>l.s))];
+  const text='Lies diesen deutschen Krimi-Lernpodcast vor wie ein professionelles Hörspiel: ruhig, spannend, natürlich betont, mit kleinen Pausen zwischen den Sätzen.\n\n'+lines.map(l=>(sp.length>1?l.s+': ':'')+l.t).join('\n');
+  const speechConfig=sp.length>1
+    ?{multiSpeakerVoiceConfig:{speakerVoiceConfigs:sp.map(n=>({speaker:n,voiceConfig:{prebuiltVoiceConfig:{voiceName:gVoice(n)}}}))}}
+    :{voiceConfig:{prebuiltVoiceConfig:{voiceName:gVoice(sp[0])}}};
+  const body=JSON.stringify({contents:[{parts:[{text}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig}});
+  const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(SET.gtts||DEF.gtts)+':generateContent';
+  for(let attempt=0;;attempt++){
+    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':SET.gemini},body});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){const part=(d.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData&&p.inlineData.data);
+      if(!part)throw new Error('Gemini hat für diesen Teil kein Audio geliefert. Bitte noch einmal auf „Vertonen“ tippen.');
+      const rate=+(((part.inlineData.mimeType||'').match(/rate=(\d+)/)||[])[1]||24000);
+      return pcmToWav(part.inlineData.data,rate)}
+    if(r.status===429&&attempt<4){const ri=(d.error?.details||[]).find(x=>x.retryDelay);const sec=Math.min(90,parseFloat(ri&&ri.retryDelay)||35);if(onWait)onWait(sec);await new Promise(z=>setTimeout(z,sec*1000));continue}
+    if(r.status===429)throw new Error('Das kostenlose Gemini-Limit für Stimmen ist erreicht. Tippe später auf „Vertonen“, fertige Teile bleiben gespeichert.');
+    if(r.status===404)throw new Error('Gemini-Stimmenmodell nicht gefunden. Prüfe den Namen in den Einstellungen.');
+    if(/api key/i.test(d.error?.message||''))throw new Error('Gemini API-Key ist ungültig.');
+    throw new Error('Gemini-Fehler: '+(d.error?.message||r.status));
+  }
+}
+function buildSegs(c){
+  const flat=[];c.chapters.forEach(ch=>ch.lines.forEach(l=>flat.push({s:GROLE[l.s]||'Erzaehler',t:l.t,ci:flat.length&&0})));
+  let ci=0;const chIdx=[];c.chapters.forEach((ch,k)=>ch.lines.forEach(()=>chIdx.push(k)));
+  const segs=[];let cur=null;
+  flat.forEach((x,i)=>{const wc=x.t.split(/\s+/).length;
+    if(cur&&chIdx[cur.from]===chIdx[i]&&(cur.sp.has(x.s)||cur.sp.size<2)&&cur.words+wc<=220){cur.to=i;cur.sp.add(x.s);cur.words+=wc}
+    else{cur={from:i,to:i,sp:new Set([x.s]),words:wc};segs.push(cur)}});
+  return {flat,segs:segs.map(g=>({from:g.from,to:g.to}))};
+}
+async function makeGeminiAudio(c,say){
+  if(!SET.gemini){say('Bitte zuerst den Gemini API-Key in den Einstellungen eintragen.','err');return false}
+  const {flat,segs}=buildSegs(c);
+  const same=c.segs&&c.segs.length===segs.length&&c.segs.every((g,k)=>g.from===segs[k].from&&g.to===segs[k].to);
+  c.segs=segs;await putCase(c);
+  const st=say('Vertone Teil 0/'+segs.length+' …');st.classList.remove('err','ok');
+  try{
+    for(let k=0;k<segs.length;k++){
+      const key=c.id+':seg:'+k;
+      if(same&&await getAudio(key))continue;
+      const blob=await gemTTS(flat.slice(segs[k].from,segs[k].to+1),sec=>{st.textContent='Kurze Pause wegen Gemini-Limit ('+Math.round(sec)+' s) … Teil '+(k+1)+'/'+segs.length});
+      await putAudio(key,blob);st.textContent='Vertone Teil '+(k+1)+'/'+segs.length+' …';
+    }
+    st.textContent='Vertonung fertig.';st.classList.add('ok');return true;
+  }catch(e){st.textContent=e.message;st.classList.add('err');return false}
+}
+function playSeg(k,blob,tok){
+  const g=P.c.segs[k],lines=P.flat.slice(g.from,g.to+1);
+  const W=lines.map(l=>l.t.split(/\s+/).length),tot=W.reduce((a,b)=>a+b,0)||1;
+  const cum=[];let acc=0;W.forEach(w=>{cum.push(acc/tot);acc+=w});
+  P.mode='seg';P.seg={start:P.flat[g.from].start,dur:lines.reduce((a,l)=>a+l.dur,0)};
+  if(P.url)URL.revokeObjectURL(P.url);P.url=URL.createObjectURL(blob);
+  const a=P.audio;a.src=P.url;a.playbackRate=P.rate;
+  const startFrac=cum[P.i-g.from]||0;
+  a.onloadedmetadata=()=>{if(tok!==P.token)return;if(startFrac>0)try{a.currentTime=startFrac*a.duration}catch(e){}};
+  a.ontimeupdate=()=>{if(tok!==P.token||!a.duration)return;const f=a.currentTime/a.duration;let j=0;while(j+1<cum.length&&cum[j+1]<=f)j++;const ni=g.from+j;if(ni!==P.i){P.i=ni;updateUI();saveProgress()}};
+  a.onended=()=>{if(tok!==P.token||!P.playing)return;P.i=g.to;setTimeout(()=>{if(tok===P.token&&P.playing)advance()},500)};
+  a.play().catch(()=>{P.playing=false;updateUI()});
+}
+
 async function makeAudio(c,say){
   const vmap={'Erzähler':SET.vNarr,'Ermittler':SET.vInv,'Zeuge':SET.vWit,'Zeugin':SET.vWit};
   const lines=[];c.chapters.forEach((ch,ci)=>ch.lines.forEach((l,li)=>lines.push({ci,li,l})));
@@ -486,9 +572,9 @@ async function makeAudio(c,say){
 }
 function vlog(msg,cls){const p=$('#vStatus');p.textContent=msg;p.className='hint '+(cls||'');return p}
 $('#voiceIt').addEventListener('click',async()=>{
-  if(!SET.eleven){vlog('Bitte zuerst den ElevenLabs API-Key in den Einstellungen eintragen.');return}
   const b=$('#voiceIt');b.disabled=true;stop();updateUI();
-  if(await makeAudio(P.c,vlog)){P.c.voice='eleven';await putCase(P.c);b.hidden=true}
+  if(SET.engine==='gemini'){if(await makeGeminiAudio(P.c,vlog)){P.c.voice='gemini';await putCase(P.c);b.hidden=true}}
+  else if(SET.engine==='eleven'){if(!SET.eleven)vlog('Bitte zuerst den ElevenLabs API-Key in den Einstellungen eintragen.','err');else if(await makeAudio(P.c,vlog)){P.c.voice='eleven';await putCase(P.c);b.hidden=true}}
   b.disabled=false;
 });
 
@@ -507,7 +593,7 @@ async function openCase(id){
   $('#tTotal').textContent=fmt(P.total);
   $('#facts').innerHTML=c.facts.map(f=>'<li>'+esc(f)+'</li>').join('');
   $('#startQuiz').hidden=!c.quiz.length;
-  $('#voiceIt').hidden=c.voice==='eleven'||!SET.eleven;$('#vStatus').textContent='';$('#endBox').hidden=true;
+  $('#voiceIt').hidden=c.voice==='eleven'||c.voice==='gemini'||SET.engine==='browser';$('#vStatus').textContent='';$('#endBox').hidden=true;
   disarm();go('akte');updateUI();
 }
 function chapStart(ci){const x=P.flat.find(f=>f.ci===ci);return x?x.start:0}
@@ -526,7 +612,8 @@ function updateUI(){
 }
 function tick(once){
   const x=P.flat[P.i];let t=x?x.start:P.total;
-  if(P.playing&&x){let frac=0;
+  if(P.playing&&P.mode==='seg'&&P.seg&&P.audio.duration)t=P.seg.start+P.audio.currentTime/P.audio.duration*P.seg.dur;
+  else if(P.playing&&x){let frac=0;
     if(P.mode==='audio'&&P.audio.duration)frac=P.audio.currentTime/P.audio.duration;
     else frac=(performance.now()-P.lineStart)/1000*P.rate/x.dur;
     t=x.start+Math.min(1,frac)*x.dur}
@@ -554,6 +641,7 @@ async function playLine(){
   if(!x){P.playing=false;P.i=0;saveProgress();updateUI();return}
   P.lineStart=performance.now();updateUI();
   cancelAnimationFrame(P.raf);P.raf=requestAnimationFrame(()=>tick(false));
+  if(P.c.voice==='gemini'&&P.c.segs){const k=P.c.segs.findIndex(g=>P.i>=g.from&&P.i<=g.to);let b=null;if(k>=0){try{b=await getAudio(P.c.id+':seg:'+k)}catch(e){}}if(tok!==P.token)return;if(b){playSeg(k,b,tok);return}}
   let blob=null;if(P.c.voice==='eleven'){try{blob=await getAudio(P.c.id+':'+x.ci+':'+x.li)}catch(e){}}
   if(tok!==P.token)return;
   if(blob){
@@ -561,7 +649,7 @@ async function playLine(){
     P.audio.src=P.url;P.audio.playbackRate=P.rate;
     P.audio.onended=()=>{if(tok!==P.token||!P.playing)return;const nx=P.flat[P.i+1];const gap=!nx?0:nx.ci!==x.ci?900:nx.s!==x.s?350:150;setTimeout(()=>{if(tok===P.token&&P.playing)advance()},gap)};
     try{await P.audio.play()}catch(e){P.playing=false;updateUI()}
-  }else{P.mode='speech';speak(x,tok)}
+  }else if(SET.engine==='browser'){P.mode='speech';speak(x,tok)}else{P.playing=false;updateUI();vlog('Diese Akte ist noch nicht vertont. Tippe auf „Vertonen“.','err')}
 }
 function advance(){P.i++;saveProgress();if(P.i>=P.flat.length){P.playing=false;P.i=P.flat.length-1;updateUI();showEnd();return}playLine()}
 function showEnd(){if(!P.c||!P.c.quiz.length)return;const b=$('#endBox');b.hidden=false;b.scrollIntoView({behavior:'smooth',block:'center'})}
@@ -609,13 +697,14 @@ function renderQ(){
 let VLIST=[];try{VLIST=JSON.parse(localStorage.getItem('lernakte.voices')||'[]')}catch(e){}
 function voiceOpts(sel,cur){const has=VLIST.some(v=>v.id===cur);sel.innerHTML=(has?'':`<option value="${esc(cur)}">Standardstimme</option>`)+VLIST.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}${v.lang?' · '+esc(v.lang):''}</option>`).join('');sel.value=cur}
 function bvOpts(sel,cur){const vs=rankVoices();sel.innerHTML='<option value="">Automatisch, beste verfügbare Stimme</option>'+vs.map(v=>`<option value="${esc(v.voiceURI)}">${esc(v.name)}</option>`).join('');sel.value=vs.some(v=>v.voiceURI===cur)?cur:''}
-function toggleBoxes(){const w=$('#sWriter').value,e=$('#sEngine').value;$('#gemBox').hidden=w!=='gemini';$('#claudeBox').hidden=w!=='claude';$('#devBox').hidden=e!=='browser';$('#elBox').hidden=e!=='eleven'}
+function toggleBoxes(){const w=$('#sWriter').value,e=$('#sEngine').value;$('#gemBox').hidden=w!=='gemini'&&e!=='gemini';$('#gTtsBox').hidden=e!=='gemini';$('#claudeBox').hidden=w!=='claude';$('#devBox').hidden=e!=='browser';$('#elBox').hidden=e!=='eleven'}
 function fillBrowserVoices(){bvOpts($('#bNarr'),SET.bNarr);bvOpts($('#bInv'),SET.bInv);bvOpts($('#bWit'),SET.bWit)}
 function fillSet(){
   $('#sWriter').value=SET.writer;$('#sGemini').value=SET.gemini;$('#sGModel').value=SET.gmodel;
   $('#sClaude').value=SET.claude;$('#sModel').value=SET.model;
   $('#sEngine').value=SET.engine;$('#sEleven').value=SET.eleven;
   voiceOpts($('#vNarr'),SET.vNarr);voiceOpts($('#vInv'),SET.vInv);voiceOpts($('#vWit'),SET.vWit);
+  const gOpt=cur=>GVOICES.map(v=>`<option value="${v}">${v}</option>`).join('');[['gNarr','gNarr'],['gInv','gInv'],['gWit','gWit']].forEach(([id,k])=>{$('#'+id).innerHTML=gOpt();$('#'+id).value=SET[k]||DEF[k]});$('#sGTts').value=SET.gtts||DEF.gtts;
   fillBrowserVoices();toggleBoxes();updInstall();$('#setMsg').textContent='';
 }
 $('#sWriter').addEventListener('change',toggleBoxes);
@@ -645,7 +734,8 @@ $('#saveSet').addEventListener('click',()=>{
     claude:$('#sClaude').value.trim(),model:$('#sModel').value,
     engine:$('#sEngine').value,eleven:$('#sEleven').value.trim(),
     vNarr:$('#vNarr').value||DEF.vNarr,vInv:$('#vInv').value||DEF.vInv,vWit:$('#vWit').value||DEF.vWit,
-    bNarr:$('#bNarr').value,bInv:$('#bInv').value,bWit:$('#bWit').value};
+    bNarr:$('#bNarr').value,bInv:$('#bInv').value,bWit:$('#bWit').value,
+    gtts:$('#sGTts').value.trim()||DEF.gtts,gNarr:$('#gNarr').value||DEF.gNarr,gInv:$('#gInv').value||DEF.gInv,gWit:$('#gWit').value||DEF.gWit};
   saveSetObj(SET);$('#setMsg').textContent='Gespeichert.';
 });
 
@@ -659,6 +749,15 @@ $('#resetAll').addEventListener('click',async()=>{
   try{localStorage.setItem('lernakte.seeded','1')}catch(e){}
   b.classList.remove('armed');b.textContent='Alles löschen und neu starten';
   $('#resetMsg').textContent='Alles gelöscht. Du startest jetzt mit einem leeren Archiv.';
+});
+
+$('#testGem').addEventListener('click',async()=>{
+  $('#saveSet').click();const m=$('#gemMsg');
+  if(!SET.gemini){m.textContent='Bitte zuerst den Gemini API-Key eintragen.';return}
+  m.textContent='Erzeuge Probe …';
+  try{const blob=await gemTTS([{s:'Erzaehler',t:'Frankfurt, an einem Dienstag im März. Thomas Keller unterschreibt einen Antrag.'},{s:'Ermittler',t:'Dann haben wir eine Verletzung der Anzeigepflicht. Die Frage ist nur: Wusste er es?'},{s:'Zeuge',t:'Er war doch vorher bei mir in Behandlung. Das weiß ich genau.'}],sec=>m.textContent='Kurze Pause wegen Gemini-Limit ('+Math.round(sec)+' s) …');
+    const a=new Audio(URL.createObjectURL(blob));await a.play();m.textContent='Probe läuft.'}
+  catch(e){m.textContent=e.message}
 });
 
 /* ---------- Installation als App ---------- */
