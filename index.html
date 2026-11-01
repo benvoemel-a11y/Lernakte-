@@ -122,6 +122,14 @@ textarea{resize:vertical;line-height:1.45}
 .crumb{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}
 .sheet-in{width:100%;max-width:560px;background:var(--panel);border-top:2px solid var(--fg);display:flex;flex-direction:column;gap:16px;padding-top:22px;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.vg{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.vrow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:center}
+.vrow .nm b{font-weight:600;font-size:15px}.vrow .nm small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.vrow .play{width:44px;height:44px;border:1px solid var(--line);background:transparent;display:grid;place-items:center}
+.vrow .play.busy{opacity:.5}
+.vbtns{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-height:34px;padding:0 10px;border:1px solid var(--line);background:transparent;font-family:var(--mono);font-size:11px;letter-spacing:.04em}
+.chip.on{background:var(--red);border-color:var(--red);color:var(--red-ink)}
 .endbox{border:2px solid var(--red);padding:18px;display:flex;flex-direction:column;gap:12px}
 .score{font-family:var(--grot);font-weight:800;font-size:110px;letter-spacing:-.05em;color:var(--red);font-variant-numeric:tabular-nums;line-height:.85}
 </style>
@@ -239,8 +247,11 @@ textarea{resize:vertical;line-height:1.45}
       <div class="field"><label class="lbl" for="gInv">Stimme Ermittler</label><select id="gInv"></select></div>
       <div class="field"><label class="lbl" for="gWit">Stimme Zeugen</label><select id="gWit"></select></div>
       <div class="field"><label class="lbl" for="sGTts">Stimmenmodell</label><input type="text" id="sGTts" autocomplete="off"></div>
-      <button class="ghost wide" id="testGem">Probe anhören</button>
+      <button class="ghost wide" id="testGem">Probe anhören: alle drei Rollen im Dialog</button>
       <p class="hint" id="gemMsg" aria-live="polite"></p>
+      <span class="lbl">Alle Stimmen anhören und zuweisen</span>
+      <p class="hint">Tippe auf ▶ für eine Hörprobe. Jede Probe wird nur einmal erzeugt und dann gespeichert. Mit den Knöpfen darunter legst du fest, wer mit dieser Stimme spricht.</p>
+      <div class="vg" id="vGallery"></div>
     </div>
     <div id="devBox" class="field" style="gap:14px">
       <p class="hint">Die Qualität hängt vom Gerät ab. iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch, dort eine Stimme mit „Premium“ oder „Erweitert“ laden. Windows: die App im Edge-Browser öffnen, dort gibt es natürliche Online-Stimmen.</p>
@@ -479,7 +490,8 @@ async function writeScript(prompt){
   return (d.candidates?.[0]?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('');
 }
 /* ---------- Gemini-Stimmen ---------- */
-const GVOICES=['Charon','Orus','Kore','Aoede','Leda','Puck','Fenrir','Zephyr','Enceladus','Sulafat','Iapetus','Algieba','Gacrux','Schedar','Achird','Sadaltager','Despina','Erinome','Umbriel','Alnilam'];
+const GVLIST=[['Charon','informativ, ruhig'],['Orus','bestimmt'],['Kore','bestimmt, klar'],['Aoede','leicht, luftig'],['Enceladus','gehaucht, geheimnisvoll'],['Sulafat','warm'],['Gacrux','reif, erfahren'],['Algenib','rau'],['Rasalgethi','informativ'],['Iapetus','klar'],['Schedar','gleichmäßig'],['Alnilam','bestimmt'],['Sadaltager','sachkundig'],['Algieba','weich'],['Despina','weich'],['Erinome','klar'],['Achernar','sanft'],['Vindemiatrix','sanft, freundlich'],['Achird','freundlich'],['Umbriel','locker'],['Callirrhoe','locker'],['Zubenelgenubi','lässig'],['Leda','jugendlich'],['Puck','munter'],['Laomedeia','munter'],['Fenrir','aufgeregt'],['Zephyr','hell'],['Autonoe','hell'],['Sadachbia','lebhaft'],['Pulcherrima','direkt']];
+const GVOICES=GVLIST.map(v=>v[0]);
 const GROLE={'Erzähler':'Erzaehler','Ermittler':'Ermittler','Zeuge':'Zeuge','Zeugin':'Zeuge'};
 function gVoice(r){return {Erzaehler:SET.gNarr,Ermittler:SET.gInv,Zeuge:SET.gWit}[r]||SET.gNarr||DEF.gNarr}
 function pcmToWav(b64,rate){
@@ -490,12 +502,12 @@ function pcmToWav(b64,rate){
   const u=new Uint8Array(buf,44);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);
   return new Blob([buf],{type:'audio/wav'});
 }
-async function gemTTS(lines,onWait){
+async function gemTTS(lines,onWait,only){
   const sp=[...new Set(lines.map(l=>l.s))];
   const text='Lies diesen deutschen Krimi-Lernpodcast vor wie ein professionelles Hörspiel: ruhig, spannend, natürlich betont, mit kleinen Pausen zwischen den Sätzen.\n\n'+lines.map(l=>(sp.length>1?l.s+': ':'')+l.t).join('\n');
   const speechConfig=sp.length>1
     ?{multiSpeakerVoiceConfig:{speakerVoiceConfigs:sp.map(n=>({speaker:n,voiceConfig:{prebuiltVoiceConfig:{voiceName:gVoice(n)}}}))}}
-    :{voiceConfig:{prebuiltVoiceConfig:{voiceName:gVoice(sp[0])}}};
+    :{voiceConfig:{prebuiltVoiceConfig:{voiceName:only||gVoice(sp[0])}}};
   const body=JSON.stringify({contents:[{parts:[{text}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig}});
   const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(SET.gtts||DEF.gtts)+':generateContent';
   for(let attempt=0;;attempt++){
@@ -704,8 +716,8 @@ function fillSet(){
   $('#sClaude').value=SET.claude;$('#sModel').value=SET.model;
   $('#sEngine').value=SET.engine;$('#sEleven').value=SET.eleven;
   voiceOpts($('#vNarr'),SET.vNarr);voiceOpts($('#vInv'),SET.vInv);voiceOpts($('#vWit'),SET.vWit);
-  const gOpt=cur=>GVOICES.map(v=>`<option value="${v}">${v}</option>`).join('');[['gNarr','gNarr'],['gInv','gInv'],['gWit','gWit']].forEach(([id,k])=>{$('#'+id).innerHTML=gOpt();$('#'+id).value=SET[k]||DEF[k]});$('#sGTts').value=SET.gtts||DEF.gtts;
-  fillBrowserVoices();toggleBoxes();updInstall();$('#setMsg').textContent='';
+  const gOpt=cur=>GVLIST.map(([v,d])=>`<option value="${v}">${v} · ${d}</option>`).join('');[['gNarr','gNarr'],['gInv','gInv'],['gWit','gWit']].forEach(([id,k])=>{$('#'+id).innerHTML=gOpt();$('#'+id).value=SET[k]||DEF[k]});$('#sGTts').value=SET.gtts||DEF.gtts;
+  renderGallery();fillBrowserVoices();toggleBoxes();updInstall();$('#setMsg').textContent='';
 }
 $('#sWriter').addEventListener('change',toggleBoxes);
 $('#sEngine').addEventListener('change',toggleBoxes);
@@ -749,6 +761,30 @@ $('#resetAll').addEventListener('click',async()=>{
   try{localStorage.setItem('lernakte.seeded','1')}catch(e){}
   b.classList.remove('armed');b.textContent='Alles löschen und neu starten';
   $('#resetMsg').textContent='Alles gelöscht. Du startest jetzt mit einem leeren Archiv.';
+});
+
+const ROLES=[['gNarr','Erzähler'],['gInv','Ermittler'],['gWit','Zeuge']];
+const PLAY_I='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>';
+function renderGallery(){
+  $('#vGallery').innerHTML=GVLIST.map(([v,d])=>`<div class="vrow"><button class="play" data-vplay="${v}" aria-label="Hörprobe ${v}">${PLAY_I}</button><div class="nm"><b>${v}</b><small>${d}</small></div><div class="vbtns">${ROLES.map(([id,r])=>`<button class="chip${$('#'+id).value===v?' on':''}" data-vset="${id}" data-v="${v}">${r}</button>`).join('')}</div></div>`).join('');
+}
+let gPrev=new Audio();
+$('#vGallery').addEventListener('click',async e=>{
+  const set=e.target.closest('[data-vset]');
+  if(set){$('#'+set.dataset.vset).value=set.dataset.v;renderGallery();$('#saveSet').click();$('#setMsg').textContent='Gespeichert: '+set.textContent+' spricht jetzt mit '+set.dataset.v+'.';return}
+  const pl=e.target.closest('[data-vplay]');if(!pl)return;
+  const v=pl.dataset.vplay,m=$('#gemMsg');
+  if(!SET.gemini&&!$('#sGemini').value.trim()){m.textContent='Bitte zuerst den Gemini API-Key eintragen.';return}
+  if(!SET.gemini)$('#saveSet').click();
+  gPrev.pause();pl.classList.add('busy');
+  try{
+    let b=await getAudio('voice:'+v);
+    if(!b){m.textContent='Erzeuge Hörprobe für '+v+' …';
+      b=await gemTTS([{s:'Erzaehler',t:'Frankfurt, an einem Dienstag im März. Thomas Keller unterschreibt einen Antrag. Was er nicht ahnt: Eine einzige Frage wird alles verändern.'}],sec=>m.textContent='Kurze Pause wegen Gemini-Limit ('+Math.round(sec)+' s) …',v);
+      await putAudio('voice:'+v,b)}
+    if(gPrev.src)URL.revokeObjectURL(gPrev.src);gPrev=new Audio(URL.createObjectURL(b));await gPrev.play();m.textContent='Du hörst: '+v+'.';
+  }catch(err){m.textContent=err.message}
+  pl.classList.remove('busy');
 });
 
 $('#testGem').addEventListener('click',async()=>{
