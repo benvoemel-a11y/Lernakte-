@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Lernakte</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Noir-Raster: Schwarzweiß mit Jalousie-Schatten, strenges Raster, große Fallnummer, Rot als einziger Akzent */
+:root{
+  --bg:#0B0B0B;--panel:#141414;--line:#2C2C2A;--fg:#F2F2F0;--muted:#A8A8A4;--dim:#74746F;
+  --red:#F0332A;--red-ink:#0B0B0B;--good:#8FCB7E;--bad:#F0332A;
+  --serif:'DM Serif Display',Georgia,serif;--grot:'Archivo',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--grot);font-size:15px;-webkit-text-size-adjust:100%}
+body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.app{max-width:560px;margin:0 auto;padding-block:20px 48px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+section{display:flex;flex-direction:column;gap:20px}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid var(--red);outline-offset:2px}
+.bar{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.eyebrow,.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.brand{margin:2px 0 0;font-family:var(--grot);font-weight:800;font-size:40px;line-height:.9;letter-spacing:-.02em;text-transform:uppercase}
+.title{margin:0;font-family:var(--serif);font-weight:400;font-size:40px;line-height:1.02;text-wrap:balance}
+.muted{color:var(--muted);margin:0;line-height:1.5}
+.icon{width:44px;height:44px;border:1px solid var(--line);background:transparent;display:grid;place-items:center}
+.back{height:44px;padding:0;border:0;background:transparent;display:flex;align-items:center;gap:6px;color:var(--muted);font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.primary,.ghost{height:52px;padding:0 22px;font-weight:600;font-size:15px;letter-spacing:.02em}
+.primary{background:var(--fg);color:var(--bg);border:2px solid var(--fg)}
+.primary:disabled{opacity:.5;cursor:default}
+.ghost{background:transparent;border:2px solid var(--fg)}
+.wide{width:100%}
+.row{display:flex;gap:10px}.row>*{flex:1}
+
+/* Archiv */
+.list{display:flex;flex-direction:column;border-top:2px solid var(--fg)}
+.file{display:grid;grid-template-columns:84px minmax(0,1fr);gap:14px;align-items:center;text-align:left;width:100%;padding:16px 0;background:transparent;border:0;border-bottom:1px solid var(--line)}
+.file .tab{display:flex;flex-direction:column;gap:2px}
+.file .tab b{font-family:var(--grot);font-weight:800;font-size:54px;line-height:.82;letter-spacing:-.04em;color:var(--red)}
+.file .tab span{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted);order:2}
+.file h3{margin:0 0 4px;font-family:var(--serif);font-weight:400;font-size:23px;line-height:1.1}
+.file p{margin:0;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file .meter{margin-top:10px;height:2px;background:var(--line)}
+.file .meter i{display:block;height:100%;background:var(--fg)}
+.empty{padding:28px 0;color:var(--muted);line-height:1.5}
+
+/* Formular */
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:120px;padding:18px;border:2px dashed #4A4A47;text-align:center;cursor:pointer;color:var(--muted)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop strong{color:var(--fg);font-weight:600}
+.field{display:flex;flex-direction:column;gap:8px}
+input[type=text],input[type=password],select,textarea{width:100%;font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:0;padding:12px 14px}
+textarea{resize:vertical;line-height:1.45}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:420px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.log li.err{color:var(--bad)}.log li.ok{color:var(--good)}
+.hint{font-size:13px;color:var(--muted);line-height:1.5;margin:0}
+.hint.err{color:var(--bad)}.hint.ok{color:var(--good)}
+
+/* Akte / Player */
+.case-head{display:flex;flex-direction:column;gap:8px}
+.case-head .topic{color:var(--muted);margin:0}
+.question{margin:0;padding:14px 0;border-top:2px solid var(--fg);border-bottom:1px solid var(--line);font-family:var(--serif);font-size:20px;line-height:1.3}
+.deck{display:flex;flex-direction:column;gap:14px}
+.screen{position:relative;min-height:230px;overflow:hidden;background:radial-gradient(circle at 74% 24%,#6E6E6B,#141414 66%);display:flex;align-items:flex-end;padding:18px}
+.blinds{position:absolute;inset:-20px;background:repeating-linear-gradient(168deg,rgba(0,0,0,.72) 0 11px,transparent 11px 24px)}
+.playing .blinds{animation:drift 9s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateY(14px)}}
+@media (prefers-reduced-motion:reduce){.playing .blinds{animation:none}}
+.caseno{position:absolute;top:6px;right:12px;font-family:var(--grot);font-weight:800;font-size:96px;line-height:.85;letter-spacing:-.05em;color:var(--red)}
+.quote{position:relative;display:flex;flex-direction:column;gap:6px;max-width:92%}
+.quote .who{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#DADAD6}
+.quote p{margin:0;font-family:var(--serif);font-style:italic;font-size:21px;line-height:1.28;color:#FFFFFF;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.tc{display:flex;justify-content:space-between;align-items:baseline;font-variant-numeric:tabular-nums}
+.tc b{font-family:var(--grot);font-weight:800;font-size:34px;letter-spacing:-.02em}
+.tc span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.scrub{height:3px;background:var(--line)}.scrub i{display:block;height:100%;width:0;background:var(--red)}
+.ctrl{display:flex;justify-content:center;align-items:center;gap:18px}
+.ctrl .s{width:48px;height:48px;border:1px solid var(--line);background:transparent;display:grid;place-items:center}
+.ctrl .p{width:68px;height:68px;border:0;background:var(--fg);color:var(--bg);display:grid;place-items:center}
+.speed{min-width:48px;height:48px;border:1px solid var(--line);background:transparent;font-family:var(--mono);font-size:12px;padding:0 8px}
+.transcript{display:flex;flex-direction:column;gap:12px;padding-top:4px}
+.ln{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;line-height:1.5}
+.ln .who{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding-top:3px}
+.ln p{margin:0;color:var(--muted)}
+.chap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;background:var(--fg);border:2px solid var(--fg)}
+.chap button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;min-height:96px;padding:12px;border:0;background:var(--bg);font-size:14px;line-height:1.3}
+.chap button b{font-family:var(--grot);font-weight:800;font-size:28px;line-height:1}
+.chap .tm{margin-top:auto;font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chap .done{color:var(--dim)}
+.chap .cur{background:var(--red);color:var(--red-ink)}.chap .cur .tm{color:var(--red-ink)}
+.memo{border-top:2px solid var(--fg);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.memo ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
+.memo li::marker{color:var(--red)}
+.danger{background:transparent;border:0;color:var(--muted);font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:10px;align-self:center}
+.danger.armed{color:var(--bad)}
+
+/* Verhör */
+.qhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted);border-bottom:2px solid var(--fg);padding-bottom:10px}
+.qtext{margin:0;font-family:var(--serif);font-weight:400;font-size:29px;line-height:1.15;text-wrap:balance}
+.opts{display:flex;flex-direction:column;gap:2px;background:var(--line);border:2px solid var(--line)}
+.opt{text-align:left;padding:15px 16px;min-height:54px;border:0;background:var(--bg);line-height:1.4}
+.opt.right{background:#16251A;box-shadow:inset 4px 0 0 var(--good)}
+.opt.wrong{background:#2A1110;box-shadow:inset 4px 0 0 var(--bad)}
+.opt:disabled{cursor:default}
+.explain{border-top:1px solid var(--line);padding-top:14px;line-height:1.5}
+.explain b{display:block;margin-bottom:4px}
+.sechead{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.link{background:none;border:0;color:var(--fg);font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;min-height:44px;padding:0 2px;text-decoration:underline;text-underline-offset:4px}
+.crumb{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}
+.sheet-in{width:100%;max-width:560px;background:var(--panel);border-top:2px solid var(--fg);display:flex;flex-direction:column;gap:16px;padding-top:22px;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.endbox{border:2px solid var(--red);padding:18px;display:flex;flex-direction:column;gap:12px}
+.score{font-family:var(--grot);font-weight:800;font-size:110px;letter-spacing:-.05em;color:var(--red);font-variant-numeric:tabular-nums;line-height:.85}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ARCHIV -->
+<section id="v-archiv">
+  <div class="bar">
+    <div><div class="eyebrow">Beweismittelarchiv</div><h1 class="brand">Lernakte</h1></div>
+    <button class="icon" data-go="settings" aria-label="Einstellungen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+  <button class="primary wide" data-go="neu">Neue Akte anlegen</button>
+  <button class="ghost wide" id="installTop" hidden>Als App installieren</button>
+  <div class="sechead"><span class="lbl">Fächer</span><button class="link" id="addFach">+ Neues Fach</button></div>
+  <div id="fachList" class="list"></div>
+  <div id="looseBox" class="field"><div class="sechead"><span class="lbl">Ohne Thema</span></div><div id="list" class="list"></div></div>
+</section>
+
+<!-- FACH -->
+<section id="v-fach" hidden>
+  <div class="bar"><button class="back" data-go="archiv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Archiv</button><button class="link" id="editFach">Bearbeiten</button></div>
+  <div><div class="crumb">Fach</div><h2 class="title" id="fName"></h2></div>
+  <div class="sechead"><span class="lbl">Themen</span><button class="link" id="addThema">+ Neues Thema</button></div>
+  <div id="themaList" class="list"></div>
+</section>
+
+<!-- THEMA -->
+<section id="v-thema" hidden>
+  <div class="bar"><button class="back" id="themaBack"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span id="themaBackL">Fach</span></button><button class="link" id="editThema">Bearbeiten</button></div>
+  <div><div class="crumb" id="tFach"></div><h2 class="title" id="tName"></h2></div>
+  <button class="primary wide" id="newInThema">Neue Akte in diesem Thema</button>
+  <div id="caseList" class="list"></div>
+</section>
+
+<!-- NEUE AKTE -->
+<section id="v-neu" hidden>
+  <div class="bar"><button class="back" data-go="archiv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Archiv</button></div>
+  <h2 class="title">Neue Akte</h2>
+  <p class="muted">Lade deine Lernunterlagen hoch. Daraus entsteht eine Folge mit Kapiteln, Aktenvermerk und Verhör.</p>
+  <label class="drop" for="file"><input type="file" id="file" accept=".pdf,.docx,.txt,.md"><strong id="fileName">Datei auswählen</strong><span>PDF, Word oder Text</span></label>
+  <div class="field"><label class="lbl" for="paste">Oder Text einfügen</label><textarea id="paste" rows="5" placeholder="Lerntext hier einfügen …"></textarea></div>
+  <div class="field"><label class="lbl" for="folderSel">Ablegen in</label><select id="folderSel"></select></div>
+  <div class="grid2">
+    <div class="field"><label class="lbl" for="topic">Hinweis zum Inhalt (optional)</label><input type="text" id="topic" placeholder="z. B. Vertragsrecht"></div>
+    <div class="field"><label class="lbl" for="len">Länge</label><select id="len"><option value="5">5 Minuten</option><option value="10" selected>10 Minuten</option><option value="15">15 Minuten</option><option value="20">20 Minuten</option></select></div>
+  </div>
+  <button class="primary wide" id="create">Akte anlegen</button>
+  <ol id="log" class="log"></ol>
+</section>
+
+<!-- AKTE -->
+<section id="v-akte" hidden>
+  <div class="bar"><button class="back" id="akteBack"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Archiv</button><button class="link" id="editCase">Bearbeiten</button></div>
+  <div class="crumb" id="aCrumb"></div>
+  <div class="case-head"><h2 class="title" id="aTitle"></h2><p class="topic" id="aTopic"></p></div>
+  <p class="question" id="aQuestion"></p>
+  <div class="deck" id="deck">
+    <div class="screen"><div class="blinds"></div><span class="caseno" id="bigNo" aria-hidden="true"></span><div class="quote"><span class="who" id="qWho"></span><p id="qText"></p></div></div>
+    <div class="tc"><b id="tNow">00:00</b><span id="tChap"></span><span id="tTotal">00:00</span></div>
+    <div class="scrub"><i id="scrub"></i></div>
+    <div class="ctrl">
+      <button class="speed" id="speed" aria-label="Geschwindigkeit">1×</button>
+      <button class="s" id="prev" aria-label="Vorheriger Satz"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg></button>
+      <button class="p" id="play" aria-label="Abspielen"><svg id="playIco" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
+      <button class="s" id="next" aria-label="Nächster Satz"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+      <span style="min-width:44px"></span>
+    </div>
+  </div>
+  <div class="endbox" id="endBox" hidden>
+    <span class="lbl">Folge beendet</span>
+    <p class="qtext" style="font-size:24px">Kurzes Verhör? Ein paar einfache Fragen, etwa eine Minute.</p>
+    <div class="row"><button class="ghost" id="endLater">Später</button><button class="primary" id="endQuiz">Verhör starten</button></div>
+  </div>
+  <button class="ghost wide" id="voiceIt">Mit ElevenLabs vertonen</button>
+  <p class="hint" id="vStatus" aria-live="polite"></p>
+  <div class="transcript" id="transcript" aria-live="polite"></div>
+  <div class="field"><span class="lbl">Kapitel</span><div class="chap" id="chap"></div></div>
+  <div class="memo"><span class="lbl">Aktenvermerk · Das musst du wissen</span><ul id="facts"></ul></div>
+  <button class="primary wide" id="startQuiz">Verhör starten</button>
+  <button class="danger" id="del">Akte löschen</button>
+</section>
+
+<!-- VERHÖR -->
+<section id="v-verhoer" hidden>
+  <div class="bar"><button class="back" id="quizBack"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Zur Akte</button><span class="eyebrow">Verhör</span></div>
+  <div id="quiz" style="display:flex;flex-direction:column;gap:18px"></div>
+</section>
+
+<!-- EINSTELLUNGEN -->
+<section id="v-settings" hidden>
+  <div class="bar"><button class="back" data-go="archiv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Archiv</button></div>
+  <h2 class="title">Einstellungen</h2>
+  <div class="memo"><span class="lbl">Als App installieren</span><p class="hint" id="installHint"></p><button class="primary wide" id="installBtn" hidden>App installieren</button></div>
+
+  <div class="memo"><span class="lbl">1 · Skript schreiben</span>
+    <div class="field"><label class="lbl" for="sWriter">Anbieter</label><select id="sWriter"><option value="gemini">Google Gemini · kostenlos mit Tageslimit</option><option value="claude">Claude · kostenpflichtig, beste Qualität</option></select></div>
+    <div id="gemBox" class="field" style="gap:14px">
+      <div class="field"><label class="lbl" for="sGemini">Gemini API-Key</label><input type="password" id="sGemini" autocomplete="off"></div>
+      <p class="hint">Kostenlos auf aistudio.google.com unter „Get API key“, ohne Kreditkarte. Lade keine vertraulichen Firmenunterlagen hoch.</p>
+      <div class="field"><label class="lbl" for="sGModel">Modell</label><input type="text" id="sGModel" autocomplete="off"></div>
+    </div>
+    <div id="claudeBox" class="field" style="gap:14px">
+      <div class="field"><label class="lbl" for="sClaude">Claude API-Key</label><input type="password" id="sClaude" autocomplete="off" placeholder="sk-ant-…"></div>
+      <div class="field"><label class="lbl" for="sModel">Modell</label><select id="sModel"><option value="claude-sonnet-5-5">Sonnet · ausgewogen</option><option value="claude-opus-5-5">Opus · beste Qualität</option><option value="claude-haiku-5-5">Haiku · schnell und günstig</option></select></div>
+    </div>
+  </div>
+
+  <div class="memo"><span class="lbl">2 · Stimmen</span>
+    <div class="field"><label class="lbl" for="sEngine">Vorlesen mit</label><select id="sEngine"><option value="browser">Gerätestimmen · kostenlos und unbegrenzt</option><option value="eleven">ElevenLabs · sehr realistisch, kostenpflichtig</option></select></div>
+    <div id="devBox" class="field" style="gap:14px">
+      <p class="hint">Die Qualität hängt vom Gerät ab. iPhone: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch, dort eine Stimme mit „Premium“ oder „Erweitert“ laden. Windows: die App im Edge-Browser öffnen, dort gibt es natürliche Online-Stimmen.</p>
+      <div class="field"><label class="lbl" for="bNarr">Stimme Erzähler</label><select id="bNarr"></select></div>
+      <div class="field"><label class="lbl" for="bInv">Stimme Ermittler</label><select id="bInv"></select></div>
+      <div class="field"><label class="lbl" for="bWit">Stimme Zeugen</label><select id="bWit"></select></div>
+      <button class="ghost wide" id="testVoice">Stimmen anhören</button>
+    </div>
+    <div id="elBox" class="field" style="gap:14px">
+      <div class="field"><label class="lbl" for="sEleven">ElevenLabs API-Key</label><input type="password" id="sEleven" autocomplete="off"></div>
+      <button class="ghost wide" id="loadVoices">Stimmen aus meinem ElevenLabs-Konto laden</button>
+      <p class="hint" id="voiceMsg">Am natürlichsten klingen deutsche Muttersprachler-Stimmen. Füge in der ElevenLabs Voice Library drei deutsche Stimmen zu „My Voices“ hinzu und lade sie dann hier.</p>
+      <div class="field"><label class="lbl" for="vNarr">Stimme Erzähler</label><select id="vNarr"></select></div>
+      <div class="field"><label class="lbl" for="vInv">Stimme Ermittler</label><select id="vInv"></select></div>
+      <div class="field"><label class="lbl" for="vWit">Stimme Zeugen</label><select id="vWit"></select></div>
+    </div>
+  </div>
+  <button class="primary wide" id="saveSet">Speichern</button>
+  <p class="hint" id="setMsg" aria-live="polite"></p>
+</section>
+
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <h3 class="title" id="shTitle" style="font-size:30px"></h3>
+    <div class="field" id="shNameF"><label class="lbl" for="shName">Name</label><input type="text" id="shName" autocomplete="off"></div>
+    <div class="field" id="shSelF"><label class="lbl" for="shSel" id="shSelL">Ablegen in</label><select id="shSel"></select></div>
+    <div class="row"><button class="ghost" id="shCancel">Abbrechen</button><button class="primary" id="shSave">Speichern</button></div>
+    <button class="danger" id="shDel">Löschen</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>{s=Math.max(0,Math.round(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+
+/* ---------- Einstellungen ---------- */
+const DEF={writer:'gemini',gemini:'',gmodel:'gemini-flash-latest',claude:'',model:'claude-sonnet-5-5',engine:'browser',eleven:'',vNarr:'pNInz6obpgDQGcFmaJgB',vInv:'ErXwobaYiN019PkySvjV',vWit:'21m00Tcm4TlvDq8ikWAM',bNarr:'',bInv:'',bWit:''};
+function loadSet(){try{return Object.assign({},DEF,JSON.parse(localStorage.getItem('lernakte.set')||'{}'))}catch(e){return {...DEF}}}
+function saveSetObj(o){try{localStorage.setItem('lernakte.set',JSON.stringify(o))}catch(e){}}
+let SET=loadSet();
+
+/* ---------- Speicher (IndexedDB) ---------- */
+const dbp=new Promise((res,rej)=>{const r=indexedDB.open('lernakte',2);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('cases'))d.createObjectStore('cases',{keyPath:'id'});if(!d.objectStoreNames.contains('audio'))d.createObjectStore('audio');if(!d.objectStoreNames.contains('folders'))d.createObjectStore('folders',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function tx(store,mode,fn){const db=await dbp;return new Promise((res,rej)=>{const t=db.transaction(store,mode);const r=fn(t.objectStore(store));t.oncomplete=()=>res(r?r.result:undefined);t.onerror=()=>rej(t.error)})}
+const allCases=()=>tx('cases','readonly',s=>s.getAll());
+const putCase=c=>tx('cases','readwrite',s=>s.put(c));
+const getAudio=k=>tx('audio','readonly',s=>s.get(k));
+const allFolders=()=>tx('folders','readonly',s=>s.getAll());
+const putFolder=f=>tx('folders','readwrite',s=>s.put(f));
+const delFolder=id=>tx('folders','readwrite',s=>s.delete(id));
+const putAudio=(k,b)=>tx('audio','readwrite',s=>s.put(b,k));
+async function delCase(id){await tx('cases','readwrite',s=>s.delete(id));await tx('audio','readwrite',s=>s.delete(IDBKeyRange.bound(id+':',id+':￿')))}
+
+/* ---------- Navigation ---------- */
+const VIEWS=['archiv','fach','thema','neu','akte','verhoer','settings'];
+function go(v){if(v!=='akte'&&v!=='verhoer')stop();VIEWS.forEach(n=>$('#v-'+n).hidden=n!==v);window.scrollTo(0,0);
+  if(v==='archiv')renderList();if(v==='fach')renderFach();if(v==='thema')renderThema();if(v==='neu')fillFolderSel();if(v==='settings')fillSet()}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
+
+/* ---------- Archiv ---------- */
+let CASES=[],FOLD=[],NEU_PRE=null;const CUR={fach:null,thema:null};
+async function loadAll(){CASES=(await allCases()).sort((a,b)=>b.created-a.created);FOLD=(await allFolders()).sort((a,b)=>a.name.localeCompare(b.name,'de'))}
+const fachs=()=>FOLD.filter(f=>!f.parent);
+const themen=id=>FOLD.filter(f=>f.parent===id);
+const casesIn=tid=>CASES.filter(c=>c.folder===tid);
+const plural=(n,a,b)=>n+' '+(n===1?a:b);
+function themaOptions(){return fachs().flatMap(f=>themen(f.id).map(t=>({v:t.id,t:f.name+' › '+t.name})))}
+function crumbFor(c){const t=FOLD.find(x=>x.id===c.folder);const f=t&&FOLD.find(x=>x.id===t.parent);return (f&&t?f.name+' › '+t.name+' · ':'')+'Band '+String(c.nr).padStart(2,'0')}
+function caseRow(c){const n=c.chapters.reduce((a,ch)=>a+ch.lines.length,0);const p=Math.round(100*(c.progress||0)/Math.max(1,n));
+  return `<button class="file" data-open="${esc(c.id)}"><div class="tab"><span>BAND</span><b>${esc(String(c.nr).padStart(2,'0'))}</b></div><div style="min-width:0"><h3>${esc(c.title)}</h3><p>${esc(c.topic||'')}${c.quizBest!=null?' · Verhör '+c.quizBest+'/'+c.quiz.length:''}</p><div class="meter"><i style="width:${p}%"></i></div></div></button>`}
+function folderRow(attr,id,name,num,lab,sub){return `<button class="file" data-${attr}="${esc(id)}"><div class="tab"><span>${lab}</span><b>${String(num).padStart(2,'0')}</b></div><div style="min-width:0"><h3>${esc(name)}</h3><p>${esc(sub)}</p></div></button>`}
+async function renderList(){
+  await loadAll();
+  const F=fachs();
+  $('#fachList').innerHTML=F.length?F.map(f=>{const th=themen(f.id);const n=th.reduce((a,t)=>a+casesIn(t.id).length,0);return folderRow('fach',f.id,f.name,th.length,'THEMEN',plural(n,'Akte','Akten'))}).join(''):'<div class="empty">Lege dein erstes Fach an, zum Beispiel „Versicherungsfach“.</div>';
+  const valid=new Set(FOLD.filter(f=>f.parent).map(f=>f.id));
+  const loose=CASES.filter(c=>!c.folder||!valid.has(c.folder));
+  $('#looseBox').hidden=!loose.length;$('#list').innerHTML=loose.map(caseRow).join('');
+}
+async function renderFach(){
+  await loadAll();const f=FOLD.find(x=>x.id===CUR.fach);if(!f){go('archiv');return}
+  $('#fName').textContent=f.name;const th=themen(f.id);
+  $('#themaList').innerHTML=th.length?th.map(t=>{const cs=casesIn(t.id);return folderRow('thema',t.id,t.name,cs.length,'AKTEN',cs[0]?'Zuletzt: '+cs[0].title:'Noch keine Akten')}).join(''):'<div class="empty">Noch keine Themen. Lege zum Beispiel „Krankenversicherung“ an.</div>';
+}
+async function renderThema(){
+  await loadAll();const t=FOLD.find(x=>x.id===CUR.thema);if(!t){go(CUR.fach?'fach':'archiv');return}
+  const f=FOLD.find(x=>x.id===t.parent);CUR.fach=t.parent;
+  $('#tFach').textContent='Fach · '+(f?f.name:'');$('#themaBackL').textContent=f?f.name:'Fach';$('#tName').textContent=t.name;
+  const cs=casesIn(t.id);
+  $('#caseList').innerHTML=cs.length?cs.map(caseRow).join(''):'<div class="empty">Noch keine Akten in diesem Thema.</div>';
+}
+function openFach(id){CUR.fach=id;go('fach')}
+function openThema(id){CUR.thema=id;go('thema')}
+document.addEventListener('click',e=>{
+  const o=e.target.closest('[data-open]');if(o){openCase(o.dataset.open);return}
+  const f=e.target.closest('[data-fach]');if(f){openFach(f.dataset.fach);return}
+  const t=e.target.closest('[data-thema]');if(t)openThema(t.dataset.thema);
+});
+$('#themaBack').addEventListener('click',()=>go('fach'));
+$('#newInThema').addEventListener('click',()=>{NEU_PRE=CUR.thema;go('neu')});
+async function fillFolderSel(){
+  await loadAll();const opts=themaOptions();const pre=NEU_PRE;NEU_PRE=null;
+  $('#folderSel').innerHTML='<option value="">Ohne Thema</option>'+opts.map(o=>`<option value="${esc(o.v)}">${esc(o.t)}</option>`).join('');
+  $('#folderSel').value=pre&&opts.some(o=>o.v===pre)?pre:'';
+}
+
+/* ---------- Bearbeiten-Fenster ---------- */
+let SH={};
+function openSheet(o){
+  SH=o;$('#shTitle').textContent=o.title;
+  $('#shNameF').hidden=o.name===undefined;$('#shName').value=o.name||'';
+  $('#shSelF').hidden=!o.options;
+  if(o.options){$('#shSelL').textContent=o.selLabel||'Ablegen in';$('#shSel').innerHTML=o.options.map(x=>`<option value="${esc(x.v)}">${esc(x.t)}</option>`).join('');$('#shSel').value=o.selected??''}
+  const d=$('#shDel');d.hidden=!o.onDelete;d.textContent=o.delLabel||'Löschen';d.classList.remove('armed');
+  $('#sheet').hidden=false;if(o.name!==undefined)setTimeout(()=>$('#shName').focus(),60);
+}
+function closeSheet(){$('#sheet').hidden=true}
+$('#shCancel').addEventListener('click',closeSheet);
+$('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
+$('#shName').addEventListener('keydown',e=>{if(e.key==='Enter')$('#shSave').click()});
+$('#shSave').addEventListener('click',async()=>{const n=$('#shName').value.trim();if(SH.name!==undefined&&!n){$('#shName').focus();return}await SH.onSave(n,$('#shSel').value);closeSheet()});
+$('#shDel').addEventListener('click',async()=>{const b=$('#shDel');if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent=SH.delConfirm||'Wirklich löschen? Nochmal tippen';return}await SH.onDelete();closeSheet()});
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+$('#addFach').addEventListener('click',()=>openSheet({title:'Neues Fach',name:'',onSave:async n=>{await putFolder({id:newId('f'),name:n,parent:null,created:Date.now()});renderList()}}));
+$('#editFach').addEventListener('click',()=>{const f=FOLD.find(x=>x.id===CUR.fach);if(!f)return;const th=themen(f.id);const n=th.reduce((a,t)=>a+casesIn(t.id).length,0);
+  openSheet({title:'Fach bearbeiten',name:f.name,onSave:async v=>{f.name=v;await putFolder(f);renderFach()},
+    delLabel:'Fach löschen',delConfirm:`${plural(th.length,'Thema','Themen')} und ${plural(n,'Akte','Akten')} mitlöschen? Nochmal tippen`,
+    onDelete:async()=>{for(const t of th){for(const c of casesIn(t.id))await delCase(c.id);await delFolder(t.id)}await delFolder(f.id);go('archiv')}})});
+$('#addThema').addEventListener('click',()=>openSheet({title:'Neues Thema',name:'',onSave:async n=>{await putFolder({id:newId('t'),name:n,parent:CUR.fach,created:Date.now()});renderFach()}}));
+$('#editThema').addEventListener('click',()=>{const t=FOLD.find(x=>x.id===CUR.thema);if(!t)return;const cs=casesIn(t.id);
+  openSheet({title:'Thema bearbeiten',name:t.name,selLabel:'Gehört zu Fach',options:fachs().map(f=>({v:f.id,t:f.name})),selected:t.parent,
+    onSave:async(v,sel)=>{t.name=v;t.parent=sel||t.parent;await putFolder(t);renderThema()},
+    delLabel:'Thema löschen',delConfirm:`${plural(cs.length,'Akte','Akten')} mitlöschen? Nochmal tippen`,
+    onDelete:async()=>{for(const c of cs)await delCase(c.id);await delFolder(t.id);go('fach')}})});
+$('#editCase').addEventListener('click',async()=>{const c=P.c;if(!c)return;await loadAll();
+  openSheet({title:'Akte bearbeiten',name:c.title,options:[{v:'',t:'Ohne Thema'}].concat(themaOptions()),selected:c.folder||'',
+    onSave:async(v,sel)=>{c.title=v;c.folder=sel||null;await putCase(c);$('#aTitle').textContent=v;$('#aCrumb').textContent=crumbFor(c)},
+    delLabel:'Akte löschen',onDelete:async()=>{stop();const back=c.folder;await delCase(c.id);P.c=null;if(back&&FOLD.some(x=>x.id===back)){openThema(back)}else go('archiv')}})});
+
+/* ---------- Dateien lesen ---------- */
+function loadScript(src){return new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Bibliothek konnte nicht geladen werden'));document.head.appendChild(s)})}
+async function readFile(f){
+  const name=f.name.toLowerCase();
+  if(name.endsWith('.pdf')){
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;let out='';
+    for(let i=1;i<=pdf.numPages;i++){const tc=await (await pdf.getPage(i)).getTextContent();out+=tc.items.map(it=>it.str).join(' ')+'\n\n'}
+    return out;
+  }
+  if(name.endsWith('.docx')){
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+    return (await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value;
+  }
+  return await f.text();
+}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];$('#fileName').textContent=f?f.name:'Datei auswählen'});
+
+/* ---------- Akte erzeugen ---------- */
+const WORDS={5:700,10:1350,15:2000,20:2700};
+const SYS=`Du schreibst Folgen für einen seriösen True-Crime-Lernpodcast auf Deutsch. Aus dem Lernmaterial wird ein fiktiver Fall, der den Stoff Schritt für Schritt erklärt.
+Regeln:
+- Fachinhalte, Begriffe, Paragraphen, Zahlen und Fristen kommen ausschließlich aus dem Lernmaterial und müssen exakt stimmen. Erfinde keine Fachinhalte.
+- Personen, Orte und Handlung des Falls sind erfunden. Ton: ruhig, spannend, sachlich, kein Klamauk, keine Gewalt-Details.
+- Erst einfach erklären, dann genauer werden. Jedes Kapitel endet mit einer offenen Frage, die zum nächsten führt.
+- Sprecher: "Erzähler", "Ermittler", "Zeuge". Jede Zeile 1 bis 3 Sätze, gut vorlesbar, keine Abkürzungen, Paragraphen ausgeschrieben (zum Beispiel "Paragraph 19").
+- Bei 5 Minuten 3 Kapitel, sonst 4 Kapitel. Das letzte heißt "Auflösung" und fasst den Stoff klar zusammen.
+- Schreibe wie gesprochene Sprache: natürliche Satzlänge, Pausen durch Satzzeichen, gelegentlich ein kurzes Zögern bei Zeugen. Keine Regieanweisungen in Klammern.
+Antworte NUR mit JSON in genau diesem Format:
+{"title":"kurzer Falltitel","topic":"Fachthema","question":"Leitfrage des Falls","chapters":[{"title":"...","lines":[{"s":"Erzähler","t":"..."}]}],"facts":["prüfungsrelevanter Merksatz"],"quiz":[{"q":"Frage","a":["Antwort A","Antwort B","Antwort C"],"c":0,"e":"kurze Begründung"}]}
+facts: 5 bis 8 Merksätze. quiz: 5 kurze, einfache Fragen zu den wichtigsten Punkten der Folge, je 3 Antworten, c ist der Index der richtigen Antwort, richtige Antwort an wechselnder Position.`;
+
+function log(msg,cls){const li=document.createElement('li');li.textContent=msg;if(cls)li.className=cls;$('#log').appendChild(li);return li}
+
+$('#create').addEventListener('click',async()=>{
+  const btn=$('#create');$('#log').innerHTML='';
+  if(SET.writer==='claude'?!SET.claude:!SET.gemini){log('Bitte zuerst den '+(SET.writer==='claude'?'Claude':'Gemini')+' API-Key in den Einstellungen eintragen.','err');return}
+  if(SET.engine==='eleven'&&!SET.eleven){log('Bitte zuerst den ElevenLabs API-Key in den Einstellungen eintragen.','err');return}
+  btn.disabled=true;
+  try{
+    let text=$('#paste').value.trim();const f=$('#file').files[0];
+    if(f){log('Lese '+f.name+' …');text=(await readFile(f)).trim()+(text?'\n\n'+text:'')}
+    if(text.length<200)throw new Error(f?'Kein lesbarer Text gefunden. Bei gescannten Seiten bitte den Text einfügen.':'Bitte eine Datei wählen oder mehr Text einfügen.');
+    if(text.length>80000){text=text.slice(0,80000);log('Unterlagen sind sehr lang, die ersten 80.000 Zeichen werden verwendet.')}
+    const folder=$('#folderSel').value||null;await loadAll();const ft=FOLD.find(x=>x.id===folder),ff=ft&&FOLD.find(x=>x.id===ft.parent);
+    const topic=$('#topic').value.trim()||(ft?(ff?ff.name+' – ':'')+ft.name:'');const len=$('#len').value;
+    const l2=log('Schreibe den Fall … das dauert 1 bis 2 Minuten.');
+    const raw=await writeScript(`Länge der Folge: ${len} Minuten, also etwa ${WORDS[len]} Wörter Sprechtext. Halte diese Länge genau ein.${topic?'\nFach/Thema: '+topic:''}\n\nLernmaterial:\n<material>\n${text}\n</material>`);
+    const j=JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
+    if(!Array.isArray(j.chapters)||!j.chapters.length)throw new Error('Antwort unvollständig. Bitte noch einmal versuchen.');
+    l2.textContent='Fall geschrieben: '+j.title;l2.className='ok';
+    const all=await allCases();
+    const c={id:'c'+Date.now().toString(36),nr:all.reduce((m,x)=>Math.max(m,x.nr||0),0)+1,title:j.title,topic:j.topic||topic,question:j.question||'',chapters:j.chapters,facts:j.facts||[],quiz:j.quiz||[],created:Date.now(),progress:0,quizBest:null,voice:'browser',folder};
+    await putCase(c);
+    if(SET.engine==='eleven'&&SET.eleven){
+      const ok=await makeAudio(c,log);
+      if(ok){c.voice='eleven';await putCase(c)}
+    }
+    log('Akte angelegt.','ok');
+    $('#paste').value='';$('#file').value='';$('#fileName').textContent='Datei auswählen';
+    setTimeout(()=>openCase(c.id),500);
+  }catch(e){log(e.message||String(e),'err')}
+  finally{btn.disabled=false}
+});
+
+async function writeScript(prompt){
+  if(SET.writer==='claude'){
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':SET.claude,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:SET.model,max_tokens:16000,system:SYS,messages:[{role:'user',content:prompt}]})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(r.status===401?'Claude API-Key ist ungültig.':'Claude-Fehler: '+(d.error?.message||r.status));
+    return (d.content||[]).map(b=>b.text||'').join('');
+  }
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(SET.gmodel||DEF.gmodel)+':generateContent',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':SET.gemini},
+    body:JSON.stringify({systemInstruction:{parts:[{text:SYS}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:32000,temperature:0.8}})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){const m=d.error?.message||String(r.status);
+    if(r.status===429)throw new Error('Das kostenlose Gemini-Limit ist für heute erreicht. Morgen geht es weiter.');
+    if(/api key/i.test(m))throw new Error('Gemini API-Key ist ungültig.');
+    if(r.status===404)throw new Error('Gemini-Modell nicht gefunden. Prüfe den Modellnamen in den Einstellungen.');
+    throw new Error('Gemini-Fehler: '+m)}
+  return (d.candidates?.[0]?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('');
+}
+async function makeAudio(c,say){
+  const vmap={'Erzähler':SET.vNarr,'Ermittler':SET.vInv,'Zeuge':SET.vWit,'Zeugin':SET.vWit};
+  const lines=[];c.chapters.forEach((ch,ci)=>ch.lines.forEach((l,li)=>lines.push({ci,li,l})));
+  const st=say('Vertone 0/'+lines.length+' …');
+  try{
+    for(let k=0;k<lines.length;k++){
+      const {ci,li,l}=lines[k];
+      const vs={'Erzähler':{stability:0.55,similarity_boost:0.8,style:0.15},'Ermittler':{stability:0.45,similarity_boost:0.8,style:0.3},'Zeuge':{stability:0.35,similarity_boost:0.8,style:0.45}}[l.s]||{stability:0.45,similarity_boost:0.8,style:0.3};
+      const body={text:l.t,model_id:'eleven_multilingual_v2',voice_settings:{...vs,use_speaker_boost:true}};
+      if(k>0)body.previous_text=lines[k-1].l.t;
+      if(k<lines.length-1)body.next_text=lines[k+1].l.t;
+      const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+encodeURIComponent(vmap[l.s]||SET.vNarr)+'?output_format=mp3_44100_128',{method:'POST',headers:{'content-type':'application/json','xi-api-key':SET.eleven},body:JSON.stringify(body)});
+      if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error('ElevenLabs: '+(d.detail?.message||d.detail?.status||r.status))}
+      await putAudio(c.id+':'+ci+':'+li,await r.blob());
+      st.textContent='Vertone '+(k+1)+'/'+lines.length+' …';
+    }
+    st.textContent='Vertonung fertig.';st.className='ok';return true;
+  }catch(e){st.textContent=e.message+' Bis zur Vertonung läuft die Browser-Stimme.';st.className='err';return false}
+}
+function vlog(msg,cls){const p=$('#vStatus');p.textContent=msg;p.className='hint '+(cls||'');return p}
+$('#voiceIt').addEventListener('click',async()=>{
+  if(!SET.eleven){vlog('Bitte zuerst den ElevenLabs API-Key in den Einstellungen eintragen.');return}
+  const b=$('#voiceIt');b.disabled=true;stop();updateUI();
+  if(await makeAudio(P.c,vlog)){P.c.voice='eleven';await putCase(P.c);b.hidden=true}
+  b.disabled=false;
+});
+
+/* ---------- Player ---------- */
+const P={c:null,flat:[],i:0,playing:false,rate:1,token:0,audio:new Audio(),lineStart:0,total:0,raf:0,url:null};
+const est=t=>Math.max(2,t.split(/\s+/).length/2.4+0.6);
+function flatten(c){const f=[];let t=0;c.chapters.forEach((ch,ci)=>ch.lines.forEach((l,li)=>{const d=est(l.t);f.push({ci,li,s:l.s,t:l.t,start:t,dur:d});t+=d}));P.total=t;return f}
+
+async function openCase(id){
+  await loadAll();const c=CASES.find(x=>x.id===id);if(!c)return;
+  stop();P.c=c;P.flat=flatten(c);P.i=Math.min(c.progress||0,P.flat.length-1);
+  $('#aCrumb').textContent=crumbFor(c);
+  $('#aTitle').textContent=c.title;$('#aTopic').textContent=c.topic||'';
+  $('#aQuestion').textContent=c.question||'';$('#aQuestion').hidden=!c.question;
+  $('#bigNo').textContent=String(c.nr).padStart(2,'0');
+  $('#tTotal').textContent=fmt(P.total);
+  $('#facts').innerHTML=c.facts.map(f=>'<li>'+esc(f)+'</li>').join('');
+  $('#startQuiz').hidden=!c.quiz.length;
+  $('#voiceIt').hidden=c.voice==='eleven'||!SET.eleven;$('#vStatus').textContent='';$('#endBox').hidden=true;
+  disarm();go('akte');updateUI();
+}
+function chapStart(ci){const x=P.flat.find(f=>f.ci===ci);return x?x.start:0}
+function updateUI(){
+  const c=P.c;if(!c)return;const x=P.flat[P.i]||P.flat[P.flat.length-1];
+  $('#tChap').textContent='Kapitel '+(x.ci+1)+' von '+c.chapters.length;
+  $('#chap').innerHTML=c.chapters.map((ch,ci)=>{const cls=ci<x.ci?'done':ci===x.ci?'cur':'';return `<button class="${cls}" data-ch="${ci}"><b>${ci+1}</b><span>${esc(ch.title)}</span><span class="tm">${fmt(chapStart(ci))}${ci<x.ci?' · erledigt':ci===x.ci?(P.playing?' · läuft':' · hier'):''}</span></button>`}).join('');
+  $('#qWho').textContent=x.s;$('#qText').textContent=x.t;
+  const prev=P.flat[P.i-1],nxt=P.flat[P.i+1];
+  const row=(y,lab)=>y?`<div class="ln"><span class="who">${lab}</span><p>${esc(y.s)}: ${esc(y.t)}</p></div>`:'';
+  $('#transcript').innerHTML=row(prev,'Davor')+row(nxt,'Danach');
+  $('#playIco').innerHTML=P.playing?'<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>':'<path d="M7 4l13 8-13 8z"/>';
+  $('#play').setAttribute('aria-label',P.playing?'Pause':'Abspielen');
+  $('#deck').classList.toggle('playing',P.playing);
+  tick(true);
+}
+function tick(once){
+  const x=P.flat[P.i];let t=x?x.start:P.total;
+  if(P.playing&&x){let frac=0;
+    if(P.mode==='audio'&&P.audio.duration)frac=P.audio.currentTime/P.audio.duration;
+    else frac=(performance.now()-P.lineStart)/1000*P.rate/x.dur;
+    t=x.start+Math.min(1,frac)*x.dur}
+  const p=P.total?t/P.total:0;
+  $('#tNow').textContent=fmt(t);$('#scrub').style.width=(p*100).toFixed(1)+'%';
+  if(!once&&P.playing)P.raf=requestAnimationFrame(()=>tick(false));
+}
+function saveProgress(){if(P.c){P.c.progress=P.i;putCase(P.c).catch(()=>{})}}
+
+let VOICES=[];
+function loadVoices(){VOICES=(speechSynthesis.getVoices()||[]).filter(v=>v.lang&&v.lang.toLowerCase().startsWith('de'))}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=()=>{loadVoices();if(!$('#v-settings').hidden)fillBrowserVoices()}}
+function rankVoices(){const sc=v=>(/premium|enhanced|erweitert/i.test(v.name)?4:0)+(/natural|online|neural/i.test(v.name)?4:0)+(/google/i.test(v.name)?1:0);return VOICES.slice().sort((a,b)=>sc(b)-sc(a))}
+function voiceFor(s,uri){if(uri){const v=VOICES.find(v=>v.voiceURI===uri);if(v)return v}const r=rankVoices();if(!r.length)return null;const idx={'Erzähler':0,'Ermittler':1,'Zeuge':2,'Zeugin':2}[s]??0;return r[idx%r.length]}
+function speak(x,tok){
+  if(!('speechSynthesis' in window)){P.playing=false;updateUI();return}
+  const u=new SpeechSynthesisUtterance(x.t);u.lang='de-DE';u.rate=P.rate;
+  const v=voiceFor(x.s,{'Erzähler':SET.bNarr,'Ermittler':SET.bInv,'Zeuge':SET.bWit,'Zeugin':SET.bWit}[x.s]);if(v)u.voice=v;
+  const go=()=>{if(tok!==P.token||!P.playing)return;const nx=P.flat[P.i+1];const gap=!nx?0:nx.ci!==x.ci?900:nx.s!==x.s?350:150;setTimeout(()=>{if(tok===P.token&&P.playing)advance()},gap)};
+  u.onend=go;u.onerror=go;
+  speechSynthesis.speak(u);
+}
+async function playLine(){
+  const tok=++P.token;const x=P.flat[P.i];
+  if(!x){P.playing=false;P.i=0;saveProgress();updateUI();return}
+  P.lineStart=performance.now();updateUI();
+  cancelAnimationFrame(P.raf);P.raf=requestAnimationFrame(()=>tick(false));
+  let blob=null;if(P.c.voice==='eleven'){try{blob=await getAudio(P.c.id+':'+x.ci+':'+x.li)}catch(e){}}
+  if(tok!==P.token)return;
+  if(blob){
+    P.mode='audio';if(P.url)URL.revokeObjectURL(P.url);P.url=URL.createObjectURL(blob);
+    P.audio.src=P.url;P.audio.playbackRate=P.rate;
+    P.audio.onended=()=>{if(tok!==P.token||!P.playing)return;const nx=P.flat[P.i+1];const gap=!nx?0:nx.ci!==x.ci?900:nx.s!==x.s?350:150;setTimeout(()=>{if(tok===P.token&&P.playing)advance()},gap)};
+    try{await P.audio.play()}catch(e){P.playing=false;updateUI()}
+  }else{P.mode='speech';speak(x,tok)}
+}
+function advance(){P.i++;saveProgress();if(P.i>=P.flat.length){P.playing=false;P.i=P.flat.length-1;updateUI();showEnd();return}playLine()}
+function showEnd(){if(!P.c||!P.c.quiz.length)return;const b=$('#endBox');b.hidden=false;b.scrollIntoView({behavior:'smooth',block:'center'})}
+$('#endLater').addEventListener('click',()=>$('#endBox').hidden=true);
+$('#endQuiz').addEventListener('click',()=>{$('#endBox').hidden=true;$('#startQuiz').click()});
+function halt(){P.token++;try{P.audio.pause()}catch(e){}if('speechSynthesis' in window)speechSynthesis.cancel();cancelAnimationFrame(P.raf)}
+function stop(){if(P.playing){P.playing=false;halt();saveProgress()}}
+function jump(i){const was=P.playing;halt();P.i=Math.max(0,Math.min(P.flat.length-1,i));saveProgress();if(was)playLine();else updateUI()}
+$('#play').addEventListener('click',()=>{if(P.playing){P.playing=false;halt();saveProgress();updateUI()}else{if(P.i>=P.flat.length-1&&P.c.progress>=P.flat.length-1)P.i=0;P.playing=true;playLine()}});
+$('#prev').addEventListener('click',()=>jump(P.i-1));
+$('#next').addEventListener('click',()=>jump(P.i+1));
+$('#chap').addEventListener('click',e=>{const b=e.target.closest('[data-ch]');if(b)jump(P.flat.findIndex(f=>f.ci===+b.dataset.ch))});
+const RATES=[1,1.25,1.5,0.85];
+$('#speed').addEventListener('click',()=>{P.rate=RATES[(RATES.indexOf(P.rate)+1)%RATES.length];$('#speed').textContent=String(P.rate).replace('.',',')+'×';if(P.playing){halt();playLine()}});
+$('#akteBack').addEventListener('click',()=>{const f=P.c&&P.c.folder;if(f&&FOLD.some(x=>x.id===f))openThema(f);else go('archiv')});
+
+let armT=0;function disarm(){$('#del').classList.remove('armed');$('#del').textContent='Akte löschen'}
+$('#del').addEventListener('click',async()=>{const b=$('#del');
+  if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Wirklich löschen? Nochmal tippen';clearTimeout(armT);armT=setTimeout(disarm,4000);return}
+  stop();const back=P.c.folder;await delCase(P.c.id);P.c=null;if(back&&FOLD.some(x=>x.id===back))openThema(back);else go('archiv')});
+
+/* ---------- Verhör ---------- */
+const Q={i:0,score:0,answered:false};
+$('#startQuiz').addEventListener('click',()=>{stop();updateUI();Q.i=0;Q.score=0;go('verhoer');renderQ()});
+$('#quizBack').addEventListener('click',()=>{go('akte');updateUI()});
+function renderQ(){
+  const c=P.c,box=$('#quiz');
+  if(Q.i>=c.quiz.length){
+    const n=c.quiz.length;const best=Math.max(c.quizBest??0,Q.score);c.quizBest=best;putCase(c);
+    const verdict=Q.score===n?'Fall gelöst. Alles richtig.':Q.score>=n*0.75?'Starke Aussage. Fast alles sitzt.':Q.score>=n*0.5?'Teilweise geklärt. Hör dir die offenen Kapitel noch einmal an.':'Der Fall ist noch offen. Hör die Folge noch einmal und versuch es erneut.';
+    box.innerHTML=`<span class="lbl">Ergebnis</span><div class="score">${Q.score}/${n}</div><p class="muted">${esc(verdict)}</p><p class="hint">Bestes Ergebnis: ${best}/${n}</p><div class="row"><button class="ghost" id="qAgain">Nochmal</button><button class="primary" id="qDone">Zur Akte</button></div>`;
+    $('#qAgain').onclick=()=>{Q.i=0;Q.score=0;renderQ()};$('#qDone').onclick=()=>{go('akte');updateUI()};return;
+  }
+  const q=c.quiz[Q.i];Q.answered=false;
+  box.innerHTML=`<div class="qhead"><span>Frage ${Q.i+1} von ${c.quiz.length}</span><span>${Q.score} richtig</span></div><p class="qtext">${esc(q.q)}</p><div class="opts">${q.a.map((a,k)=>`<button class="opt" data-k="${k}">${esc(a)}</button>`).join('')}</div><div id="qx"></div>`;
+  box.querySelector('.opts').onclick=e=>{const b=e.target.closest('[data-k]');if(!b||Q.answered)return;Q.answered=true;
+    const k=+b.dataset.k,ok=k===q.c;if(ok)Q.score++;
+    box.querySelectorAll('.opt').forEach(o=>{o.disabled=true;if(+o.dataset.k===q.c)o.classList.add('right');else if(o===b)o.classList.add('wrong')});
+    $('#qx').innerHTML=`<div class="explain"><b>${ok?'Richtig.':'Nicht ganz.'}</b>${esc(q.e||'')}</div><button class="primary wide" id="qNext" style="margin-top:14px">${Q.i+1<c.quiz.length?'Nächste Frage':'Ergebnis ansehen'}</button>`;
+    $('#qNext').onclick=()=>{Q.i++;renderQ()};
+  };
+}
+
+/* ---------- Einstellungen UI ---------- */
+let VLIST=[];try{VLIST=JSON.parse(localStorage.getItem('lernakte.voices')||'[]')}catch(e){}
+function voiceOpts(sel,cur){const has=VLIST.some(v=>v.id===cur);sel.innerHTML=(has?'':`<option value="${esc(cur)}">Standardstimme</option>`)+VLIST.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}${v.lang?' · '+esc(v.lang):''}</option>`).join('');sel.value=cur}
+function bvOpts(sel,cur){const vs=rankVoices();sel.innerHTML='<option value="">Automatisch, beste verfügbare Stimme</option>'+vs.map(v=>`<option value="${esc(v.voiceURI)}">${esc(v.name)}</option>`).join('');sel.value=vs.some(v=>v.voiceURI===cur)?cur:''}
+function toggleBoxes(){const w=$('#sWriter').value,e=$('#sEngine').value;$('#gemBox').hidden=w!=='gemini';$('#claudeBox').hidden=w!=='claude';$('#devBox').hidden=e!=='browser';$('#elBox').hidden=e!=='eleven'}
+function fillBrowserVoices(){bvOpts($('#bNarr'),SET.bNarr);bvOpts($('#bInv'),SET.bInv);bvOpts($('#bWit'),SET.bWit)}
+function fillSet(){
+  $('#sWriter').value=SET.writer;$('#sGemini').value=SET.gemini;$('#sGModel').value=SET.gmodel;
+  $('#sClaude').value=SET.claude;$('#sModel').value=SET.model;
+  $('#sEngine').value=SET.engine;$('#sEleven').value=SET.eleven;
+  voiceOpts($('#vNarr'),SET.vNarr);voiceOpts($('#vInv'),SET.vInv);voiceOpts($('#vWit'),SET.vWit);
+  fillBrowserVoices();toggleBoxes();updInstall();$('#setMsg').textContent='';
+}
+$('#sWriter').addEventListener('change',toggleBoxes);
+$('#sEngine').addEventListener('change',toggleBoxes);
+$('#testVoice').addEventListener('click',()=>{
+  if(!('speechSynthesis' in window))return;speechSynthesis.cancel();
+  const pick={'Erzähler':$('#bNarr').value,'Ermittler':$('#bInv').value,'Zeuge':$('#bWit').value};
+  [['Erzähler','Frankfurt, an einem Dienstag im März.'],['Ermittler','Wir haben eine Verletzung der Anzeigepflicht.'],['Zeuge','Er war doch vorher in Behandlung.']].forEach(([s,t])=>{const u=new SpeechSynthesisUtterance(t);u.lang='de-DE';const v=voiceFor(s,pick[s]);if(v)u.voice=v;speechSynthesis.speak(u)});
+});
+$('#loadVoices').addEventListener('click',async()=>{
+  const key=$('#sEleven').value.trim(),m=$('#voiceMsg');
+  if(!key){m.textContent='Bitte zuerst den ElevenLabs API-Key eintragen.';return}
+  m.textContent='Lade Stimmen …';
+  try{
+    const r=await fetch('https://api.elevenlabs.io/v1/voices',{headers:{'xi-api-key':key}});
+    if(!r.ok)throw new Error(r.status===401?'Der ElevenLabs API-Key ist ungültig.':'ElevenLabs-Fehler '+r.status);
+    const d=await r.json();
+    VLIST=(d.voices||[]).map(v=>({id:v.voice_id,name:v.name,lang:(v.labels&&(v.labels.language||v.labels.accent))||''}));
+    try{localStorage.setItem('lernakte.voices',JSON.stringify(VLIST))}catch(e){}
+    const cur=[$('#vNarr').value,$('#vInv').value,$('#vWit').value];
+    voiceOpts($('#vNarr'),cur[0]);voiceOpts($('#vInv'),cur[1]);voiceOpts($('#vWit'),cur[2]);
+    m.textContent=VLIST.length+' Stimmen geladen. Wähle für jede Rolle eine andere Stimme und tippe auf Speichern.';
+  }catch(e){m.textContent=e.message}
+});
+$('#saveSet').addEventListener('click',()=>{
+  SET={writer:$('#sWriter').value,gemini:$('#sGemini').value.trim(),gmodel:$('#sGModel').value.trim()||DEF.gmodel,
+    claude:$('#sClaude').value.trim(),model:$('#sModel').value,
+    engine:$('#sEngine').value,eleven:$('#sEleven').value.trim(),
+    vNarr:$('#vNarr').value||DEF.vNarr,vInv:$('#vInv').value||DEF.vInv,vWit:$('#vWit').value||DEF.vWit,
+    bNarr:$('#bNarr').value,bInv:$('#bInv').value,bWit:$('#bWit').value};
+  saveSetObj(SET);$('#setMsg').textContent='Gespeichert.';
+});
+
+/* ---------- Installation als App ---------- */
+let DEFER=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFER=e;updInstall()});
+window.addEventListener('appinstalled',()=>{DEFER=null;updInstall()});
+function updInstall(){
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const h=$('#installHint'),b=$('#installBtn'),top=$('#installTop');
+  if(standalone){h.textContent='Lernakte ist als App installiert.';b.hidden=true;top.hidden=true;return}
+  if(DEFER){h.textContent='Installiere Lernakte als App auf diesem Gerät.';b.hidden=false;top.hidden=false;return}
+  h.textContent=ios?'In Safari unten auf „Teilen“ tippen, dann „Zum Home-Bildschirm“.':'Im Browser-Menü „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.';
+  b.hidden=true;top.hidden=true;
+}
+async function doInstall(){if(!DEFER)return;DEFER.prompt();try{await DEFER.userChoice}catch(e){}DEFER=null;updInstall()}
+$('#installBtn').addEventListener('click',doInstall);
+$('#installTop').addEventListener('click',doInstall);
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---------- Beispielakte ---------- */
+const DEMO={id:'demo',nr:1,title:'Die verschwiegene Vorerkrankung',topic:'Vorvertragliche Anzeigepflicht · Beispielakte',question:'Darf der Versicherer den Vertrag von Herrn Keller rückgängig machen?',created:1,progress:0,quizBest:null,voice:'browser',
+chapters:[
+{title:'Der Antrag',lines:[
+{s:'Erzähler',t:'Frankfurt, an einem Dienstag im März. Thomas Keller unterschreibt einen Antrag auf eine Berufsunfähigkeitsversicherung.'},
+{s:'Erzähler',t:'Im Antrag stehen Gesundheitsfragen. Keller kreuzt überall Nein an. Zwei Jahre später wird er berufsunfähig.'},
+{s:'Ermittler',t:'Der Versicherer prüft die Akte und stößt auf etwas. Keller war vor Antragstellung wegen Rückenproblemen in Behandlung.'},
+{s:'Erzähler',t:'Die Frage dieses Falls lautet: Was passiert, wenn jemand bei Vertragsschluss etwas Wichtiges verschweigt?'}]},
+{title:'Die Gesundheitsfragen',lines:[
+{s:'Ermittler',t:'Einfach gesagt: Wer eine Versicherung abschließt, muss ehrlich sagen, was für das Risiko wichtig ist. Das nennt man vorvertragliche Anzeigepflicht.'},
+{s:'Ermittler',t:'Genauer geregelt ist das in Paragraph 19 des Versicherungsvertragsgesetzes. Anzeigen muss man die Umstände, nach denen der Versicherer in Textform gefragt hat.'},
+{s:'Zeuge',t:'Ich bin seine Hausärztin. Herr Keller war bei mir mehrfach wegen seines Rückens. Das war deutlich vor dem Antrag.'},
+{s:'Ermittler',t:'Wichtig ist der Zeitpunkt. Die Pflicht gilt bis zur Abgabe der Vertragserklärung. Was danach passiert, muss nicht nachgemeldet werden.'},
+{s:'Erzähler',t:'Die Anzeigepflicht ist also verletzt. Aber welche Folgen das hat, hängt von einer entscheidenden Frage ab.'}]},
+{title:'Vorsatz oder Versehen?',lines:[
+{s:'Ermittler',t:'Entscheidend ist das Verschulden. Hat Keller vorsätzlich oder grob fahrlässig falsch geantwortet, darf der Versicherer zurücktreten.'},
+{s:'Ermittler',t:'War es nur einfache Fahrlässigkeit, ist der Rücktritt ausgeschlossen. Dann darf der Versicherer mit einer Frist von einem Monat kündigen.'},
+{s:'Zeuge',t:'Der Versicherer hat mir gesagt, mit dem Rücken hätte er Herrn Keller trotzdem versichert. Nur mit Zuschlag oder mit Ausschluss.'},
+{s:'Ermittler',t:'Das ändert viel. Hätte der Versicherer den Vertrag auch in Kenntnis der Umstände geschlossen, nur zu anderen Bedingungen, scheiden Rücktritt und Kündigung aus, außer bei Vorsatz. Dann werden die anderen Bedingungen Vertragsbestandteil.'},
+{s:'Erzähler',t:'Bleibt eine letzte Frage: Hat der Versicherer alles richtig gemacht, um seine Rechte überhaupt nutzen zu dürfen?'}]},
+{title:'Auflösung',lines:[
+{s:'Ermittler',t:'Der Versicherer hat seine Rechte nur, wenn er Keller vorher durch gesonderte Mitteilung in Textform auf die Folgen einer Pflichtverletzung hingewiesen hat.'},
+{s:'Ermittler',t:'Außerdem muss er seine Rechte innerhalb eines Monats geltend machen, nachdem er von der Verletzung erfahren hat.'},
+{s:'Erzähler',t:'Im Fall Keller hätte der Versicherer ihn mit Zuschlag versichert. Rücktritt und Kündigung scheiden deshalb aus, wenn kein Vorsatz vorliegt. Der Vertrag wird angepasst.'},
+{s:'Erzähler',t:'Merksatz: Erst fragen, ob die Anzeigepflicht verletzt ist. Dann das Verschulden prüfen. Dann fragen, ob der Versicherer den Vertrag auch anders geschlossen hätte.'}]}],
+facts:['Anzeigepflicht nach Paragraph 19 VVG: nur Umstände, nach denen der Versicherer in Textform gefragt hat.','Die Pflicht gilt bis zur Abgabe der Vertragserklärung des Versicherungsnehmers.','Vorsatz oder grobe Fahrlässigkeit: Rücktritt möglich.','Einfache Fahrlässigkeit: kein Rücktritt, aber Kündigung mit Monatsfrist.','Hätte der Versicherer zu anderen Bedingungen abgeschlossen: Vertragsanpassung statt Rücktritt oder Kündigung, außer bei Vorsatz.','Voraussetzung: gesonderte Mitteilung in Textform über die Folgen.','Rechte müssen innerhalb eines Monats ab Kenntnis geltend gemacht werden.'],
+quiz:[
+{q:'Bis wann muss der Versicherungsnehmer gefahrerhebliche Umstände anzeigen?',a:['Bis zum ersten Schadenfall','Bis zur Abgabe seiner Vertragserklärung','Innerhalb eines Jahres nach Vertragsbeginn','Bis zum Ende der Vertragslaufzeit'],c:1,e:'Die Anzeigepflicht gilt bis zur Abgabe der Vertragserklärung.'},
+{q:'Welche Umstände muss er anzeigen?',a:['Alle, die ihm wichtig erscheinen','Nur Vorerkrankungen der letzten 6 Monate','Die, nach denen der Versicherer in Textform gefragt hat','Nur Umstände, die er schriftlich belegen kann'],c:2,e:'Anzuzeigen sind die Umstände, nach denen der Versicherer in Textform gefragt hat.'},
+{q:'Keller hat grob fahrlässig falsch geantwortet. Der Versicherer hätte ihn mit Zuschlag angenommen. Was gilt?',a:['Vertragsanpassung mit Zuschlag','Rücktritt vom Vertrag','Fristlose Kündigung','Der Vertrag bleibt unverändert'],c:0,e:'Hätte der Versicherer zu anderen Bedingungen abgeschlossen, scheiden Rücktritt und Kündigung aus, außer bei Vorsatz.'},
+{q:'Was darf der Versicherer bei einfacher Fahrlässigkeit?',a:['Zurücktreten','Mit einer Frist von einem Monat kündigen','Den Vertrag anfechten','Nichts, er muss leisten'],c:1,e:'Der Rücktritt ist ausgeschlossen, die Kündigung mit Monatsfrist bleibt möglich.'},
+{q:'Welche Voraussetzung muss der Versicherer erfüllen, um seine Rechte zu nutzen?',a:['Ein Gerichtsurteil','Eine mündliche Belehrung beim Termin','Eine gesonderte Mitteilung in Textform über die Folgen','Eine Unterschrift des Vermittlers'],c:2,e:'Er muss den Versicherungsnehmer durch gesonderte Mitteilung in Textform auf die Folgen hinweisen.'},
+{q:'Innerhalb welcher Frist muss der Versicherer seine Rechte geltend machen?',a:['Ein Monat ab Kenntnis','Zwei Wochen ab Vertragsschluss','Drei Monate ab Kenntnis','Ein Jahr ab Schadenfall'],c:0,e:'Die Frist beträgt einen Monat, nachdem er von der Verletzung erfahren hat.'}]};
+
+/* ---------- Start ---------- */
+(async()=>{
+  try{let seeded=false;try{seeded=localStorage.getItem('lernakte.seeded')==='1'}catch(e){}
+    if(!seeded){if(!(await allCases()).length)await putCase(DEMO);try{localStorage.setItem('lernakte.seeded','1')}catch(e){}}}catch(e){}
+  renderList();updInstall();
+})();
+</script>
+</body>
+</html>

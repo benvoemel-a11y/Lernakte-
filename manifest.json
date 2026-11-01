@@ -1,0 +1,20 @@
+{
+ "name": "Lernakte",
+ "short_name": "Lernakte",
+ "start_url": "./",
+ "display": "standalone",
+ "background_color": "#0B0B0B",
+ "theme_color": "#0B0B0B",
+ "lang": "de",
+ "icons": [
+  {
+   "src": "icon.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ],
+ "id": "./",
+ "scope": "./",
+ "description": "Lernunterlagen als True-Crime-Podcast"
+}
